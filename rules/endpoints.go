@@ -16,6 +16,7 @@ package rules
 
 import (
 	log "github.com/sirupsen/logrus"
+	"os"
 
 	"github.com/projectcalico/felix/hashutils"
 	. "github.com/projectcalico/felix/iptables"
@@ -338,8 +339,17 @@ func (r *DefaultRuleRenderer) endpointIptablesChain(
 			//
 			// For untracked and pre-DNAT rules, we don't do that because there may be
 			// normal rules still to be applied to the packet in the filter table.
+			match := Match().MarkClear(r.IptablesMarkPass)
+			if os.Getenv("FELIX_LOGNOPOLICYDROP") != "false" {
+				rules = append(rules, Rule{
+					Match: match,
+					Action: LogAction{
+						Prefix: "calico-no-policy-drop",
+					},
+				})
+			}
 			rules = append(rules, Rule{
-				Match:   Match().MarkClear(r.IptablesMarkPass),
+				Match:   match,
 				Action:  DropAction{},
 				Comment: "Drop if no policies passed packet",
 			})
